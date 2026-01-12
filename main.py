@@ -1,37 +1,50 @@
-from core.player_controller import SmartPlayerController
-import time
+from core.player_controller import AIVOController
+from core.content_parser import ContentParser
+import os
 
 def main():
-    # 1. 實例化控制器
-    player = SmartPlayerController()
+    # 1. 初始化控制器與解析器
+    player = AIVOController()
+    parser = ContentParser()
 
-    # 模擬輸入資料 (未來這裡會接上檔案讀取器)
-    sample_text = """
-    這是一個智慧播放器的測試文本。
-    我們正在測試文字轉語音的功能，同時背景應該會有輕音樂在播放。
-    未來的版本，這裡的聲音將會被替換成更擬真的 AI 人聲。
-    """
+    print("=== 智慧播放器 v0.2 ===")
     
-    # 假設你有一個 mp3 檔案，請替換成實際路徑，或者設為 None 測試純朗讀
-    # 這裡請準備一個 'bgm.mp3' 放在同目錄下，或是將路徑設為 None
-    bgm_file = "harp.wav" 
-    
-    # 為了演示，我們檢查一下檔案是否存在，若無則不播音樂
-    import os
-    if not os.path.exists(bgm_file):
-        print(f"提示: 找不到 {bgm_file}，將僅進行語音朗讀。")
-        bgm_file = None
+    # 2. 設定要讀取的檔案 (請在此修改你的測試檔案路徑)
+    # 建議在專案目錄下放一個 'novel.txt' 或 'paper.pdf' 測試
+    input_file = "novel.txt" 
+    bgm_file = "harp.wav"
 
-    # 2. 開始播放
-    player.start_session(sample_text, bgm_file)
-
-    # 3. 模擬程式運行，等待使用者輸入來停止
+    # 3. 解析文本
+    print(f"正在讀取檔案: {input_file} ...")
     try:
-        input("按下 Enter 鍵以停止播放...\n")
+        text_content = parser.load_file(input_file)
+        
+        # 簡單檢查是否有內容
+        if not text_content or len(text_content) < 5:
+            print("警告: 讀取到的內容過少或為空。")
+        else:
+            print(f"讀取成功！字數: {len(text_content)}")
+            
+    except Exception as e:
+        print(f"錯誤: {e}")
+        return
+
+    # 4. 檢查 BGM
+    if not os.path.exists(bgm_file):
+        bgm_file = None
+        print("提示: 無背景音樂檔案，將僅進行朗讀。")
+
+    # 5. 開始播放
+    # 為了避免一次讀太長，我們只取前 500 字做示範，實際使用可移除切片
+    preview_text = text_content[:500] 
+    
+    player.start_session(preview_text, bgm_file)
+
+    try:
+        input(">> 按下 Enter 鍵以停止播放...\n")
     except KeyboardInterrupt:
         pass
     
-    # 4. 停止並退出
     player.stop_all()
 
 if __name__ == "__main__":

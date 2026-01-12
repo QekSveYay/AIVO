@@ -2,7 +2,7 @@ from engines.tts_engine import TTSEngine
 from engines.music_engine import MusicEngine
 import time
 
-class SmartPlayerController:
+class AIVOController:
     def __init__(self):
         self.tts = TTSEngine()
         self.music = MusicEngine()
