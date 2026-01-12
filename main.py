@@ -1,51 +1,49 @@
+import multiprocessing
 from core.player_controller import AIVOController
 from core.content_parser import ContentParser
 import os
+import time
 
 def main():
-    # 1. 初始化控制器與解析器
     player = AIVOController()
     parser = ContentParser()
-
-    print("=== 智慧播放器 v0.2 ===")
     
-    # 2. 設定要讀取的檔案 (請在此修改你的測試檔案路徑)
-    # 建議在專案目錄下放一個 'novel.txt' 或 'paper.pdf' 測試
-    input_file = "novel.txt" 
+    # 建立一個長一點的測試文本
+    long_text = """
+    這是第一句測試文本，我們正在測試分段讀取的功能。
+    這是第二句，系統應該會先把文章切開，然後一句一句讀。
+    這樣做的好處是，當你想要停止的時候，系統可以反應得更快。
+    不像舊版本，必須等整篇文章讀完才能停下來。
+    這是第五句，你可以試著在這一句讀完之前，按下 Enter 鍵停止。
+    如果成功停止，代表我們的架構重構非常成功！
+    接下來是湊字數的內容，為了證明它能處理長文。
+    天氣真好，適合寫程式。
+    人工智慧的發展日新月異，Python 是最好的語言。
+    """
+    
+    # 或者讀取你的小說檔案
+    # text_content = parser.load_file("novel.txt")
+    
+    # 這裡我們先用變數測試
+    text_content = long_text
     bgm_file = "harp.wav"
-
-    # 3. 解析文本
-    print(f"正在讀取檔案: {input_file} ...")
-    try:
-        text_content = parser.load_file(input_file)
-        
-        # 簡單檢查是否有內容
-        if not text_content or len(text_content) < 5:
-            print("警告: 讀取到的內容過少或為空。")
-        else:
-            print(f"讀取成功！字數: {len(text_content)}")
-            
-    except Exception as e:
-        print(f"錯誤: {e}")
-        return
-
-    # 4. 檢查 BGM
+    
     if not os.path.exists(bgm_file):
         bgm_file = None
-        print("提示: 無背景音樂檔案，將僅進行朗讀。")
 
-    # 5. 開始播放
-    # 為了避免一次讀太長，我們只取前 500 字做示範，實際使用可移除切片
-    preview_text = text_content[:500] 
+    print("--- 按下 Enter 後開始播放 ---")
+    input()
     
-    player.start_session(preview_text, bgm_file)
+# 開始播放
+    player.start_session(long_text, bgm_file)
 
-    try:
-        input(">> 按下 Enter 鍵以停止播放...\n")
-    except KeyboardInterrupt:
-        pass
+    print(">> 系統運行中... 按下 Enter 鍵強制停止 <<")
+    input() 
     
     player.stop_all()
+    print("程式結束。")
 
+# [非常重要] 這一行絕對不能少！
 if __name__ == "__main__":
+    multiprocessing.freeze_support() # 如果你以後要打包成 exe，這行會有幫助
     main()
