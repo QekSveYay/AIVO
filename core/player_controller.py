@@ -27,22 +27,27 @@ class AIVOController:
         self.is_running = False
         self.stop_signal = False
         self.current_worker = None
+        self.master_thread = None
 
     def start_session(self, text_content, bgm_path=None):
-        # 1. 文本分析
+        if self.is_running:
+            return # 防止重複啟動
+            
         sentences = self.parser.split_text(text_content)
+        if not sentences:
+            return
+
         self.is_running = True
         self.stop_signal = False
         
-        # 2. 音樂啟動
         if bgm_path:
             self.music.load_music(bgm_path)
             self.music.set_volume(0.3)
             self.music.play(loop=True)
 
-        # 3. 啟動一個主管理執行緒來輪詢句子
         import threading
         self.master_thread = threading.Thread(target=self._manage_sentences, args=(sentences,))
+        self.master_thread.daemon = True # 確保主程式關閉時，這個執行緒也會關閉
         self.master_thread.start()
 
     def _manage_sentences(self, sentences):
@@ -76,12 +81,8 @@ class AIVOController:
         print("--- 播放完畢 ---")
 
     def stop_all(self):
-        """立即停止"""
-        print("停止播放中...")
         self.stop_signal = True
-        
-        # 殺掉當前正在唸書的工人
         if self.current_worker and self.current_worker.is_alive():
             self.current_worker.terminate()
-            
         self.music.stop()
+        self.is_running = False
