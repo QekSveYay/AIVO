@@ -61,25 +61,63 @@ class AIVOGUI:
 
     def _handle_play(self):
         if not self.selected_file:
-            messagebox.showwarning("提示", "請先選擇要朗讀的文本檔案！")
+            messagebox.showwarning("提示", "請選擇檔案")
             return
         
-        if self.controller.is_running:
-            return
+        # 每次按下播放時，重新檢查進度
+        last_pos = self.controller.progress_mgr.get_progress(self.selected_file)
+        start_idx = 0
+        
+        if last_pos > 0:
+            if messagebox.askyesno("續讀", f"是否從第 {last_pos + 1} 句繼續？"):
+                start_idx = last_pos
 
-        # 讀取檔案內容
         try:
             content = self.controller.parser.load_file(self.selected_file)
-            self.controller.start_session(content, self.selected_bgm)
-            self.status_var.set("狀態: 正在播放中...")
-            self.btn_play.config(state="disabled")
+            # 確保這裡傳入了四個參數
+            self.controller.start_session(self.selected_file, content, self.selected_bgm, start_idx)
+            self.status_var.set(f"播放中 (從第 {start_idx+1} 句開始)")
         except Exception as e:
-            messagebox.showerror("錯誤", f"無法啟動播放: {e}")
+            messagebox.showerror("錯誤", str(e))
 
     def _handle_stop(self):
         self.controller.stop_all()
         self.status_var.set("狀態: 已停止")
         self.btn_play.config(state="normal")
+    
+    def _select_text(self):
+        file = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("PDF files", "*.pdf")])
+        if file:
+            self.selected_file = file
+            # 檢查是否有存檔進度
+            last_pos = self.controller.progress_mgr.get_progress(file)
+            
+            if last_pos > 0:
+                self.lbl_text.config(text=f"文本: {file.split('/')[-1]} (進度: 第{last_pos+1}句)", fg="blue")
+                self.resume_index = last_pos # 暫存進度
+            else:
+                self.lbl_text.config(text=f"文本: {file.split('/')[-1]}", fg="black")
+                self.resume_index = 0
+
+    def _handle_play(self):
+        if not self.selected_file:
+            messagebox.showwarning("提示", "請先選擇檔案！")
+            return
+        
+        # 詢問是否續讀
+        start_idx = 0
+        if self.resume_index > 0:
+            if messagebox.askyesno("續讀確認", f"偵測到上次讀到第 {self.resume_index+1} 句，是否繼續？"):
+                start_idx = self.resume_index
+
+        try:
+            content = self.controller.parser.load_file(self.selected_file)
+            # 傳入檔案路徑與起始索引
+            self.controller.start_session(self.selected_file, content, self.selected_bgm, start_idx)
+            self.status_var.set("狀態: 正在播放中...")
+            self.btn_play.config(state="disabled")
+        except Exception as e:
+            messagebox.showerror("錯誤", f"無法啟動: {e}")
 
 if __name__ == "__main__":
     # Windows 下 multiprocessing 必須在 if __name__ == "__main__" 下運行
