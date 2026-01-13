@@ -32,6 +32,9 @@ class AIVOGUI:
         self.lbl_bgm = tk.Label(file_frame, text="背景音樂: 尚未選擇", fg="gray")
         self.lbl_bgm.grid(row=1, column=0, sticky="w")
         tk.Button(file_frame, text="選擇音樂", command=self._select_bgm).grid(row=1, column=1, padx=5)
+        # 在 GUI 介面增加一個變數
+        self.auto_bgm_var = tk.BooleanVar(value=True)
+        tk.Checkbutton(file_frame, text="自動分析內容並匹配音樂", variable=self.auto_bgm_var).grid(row=2, column=0, sticky="w")
 
         # 在「檔案設定」下方增加「聲音設定」
         voice_frame = tk.LabelFrame(self.root, text="語音人聲設定", padx=10, pady=10)
@@ -77,6 +80,10 @@ class AIVOGUI:
             messagebox.showwarning("提示", "請選擇檔案")
             return
         
+        current_bgm = self.selected_bgm
+        if self.auto_bgm_var.get() and not current_bgm:
+            current_bgm = None # 讓 Controller 自己去分析
+            
         # 每次按下播放時，重新檢查進度
         last_pos = self.controller.progress_mgr.get_progress(self.selected_file)
         start_idx = 0

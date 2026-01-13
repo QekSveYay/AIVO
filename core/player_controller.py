@@ -9,6 +9,7 @@ import threading
 from engines.music_engine import MusicEngine
 from core.content_parser import ContentParser
 from core.progress_manager import ProgressManager
+from core.mood_engine import MoodEngine
 
 # === 新的 Edge-TTS 工人 ===
 def edge_tts_worker(text, voice_id):
@@ -38,6 +39,7 @@ class AIVOController:
         self.music = MusicEngine()
         self.parser = ContentParser()
         self.progress_mgr = ProgressManager()
+        self.mood_engine = MoodEngine()
 
         self.selected_voice_id = "zh-TW-HsiaoChenNeural" # 預設台灣女聲
 
@@ -63,6 +65,10 @@ class AIVOController:
         self.is_running = True
         self.stop_signal = False
         
+        # 如果使用者沒選音樂，自動分析文本情緒並配樂
+        if not bgm_path:
+            bgm_path = self.mood_engine.get_music_for_text(text_content[:1000])
+            print(f"自動偵測氛圍並配樂: {bgm_path}")
         if bgm_path:
             self.music.load_music(bgm_path)
             self.music.set_volume(0.2)

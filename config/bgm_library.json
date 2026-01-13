@@ -1,0 +1,6 @@
+{
+    "calm": ["piano_meditation.mp3", "forest_rain.mp3"],
+    "tense": ["thriller_ambient.mp3", "dark_mystery.mp3"],
+    "happy": ["sunny_day.mp3", "acoustic_guitar.mp3"],
+    "academic": ["lofi_study.mp3", "classical_strings.mp3"]
+}
