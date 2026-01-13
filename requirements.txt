@@ -1,3 +1,4 @@
 pyttsx3
 pygame
- pypdf
+pypdf
+edge_tts

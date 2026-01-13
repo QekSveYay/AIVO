@@ -113,13 +113,12 @@ class AIVOGUI:
                 self.resume_index = 0
 
     def _load_voices(self):
-        # 從控制器取得系統人聲清單
+        # 取得我們手動定義的 Edge-TTS 人聲
         self.all_voices = self.controller.get_voices()
         voice_names = [v['name'] for v in self.all_voices]
         self.voice_combo['values'] = voice_names
-        if voice_names:
-            self.voice_combo.current(0) # 預設選第一個
-            self.controller.set_voice(self.all_voices[0]['id'])
+        self.voice_combo.current(0)
+        self.controller.set_voice(self.all_voices[0]['id'])
 
     def _on_voice_selected(self, event):
         idx = self.voice_combo.current()

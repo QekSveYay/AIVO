@@ -1,19 +1,45 @@
 import multiprocessing
 import time
-import pyttsx3
+import asyncio
+import edge_tts
+import pygame
+import os
 import threading
+
 from engines.music_engine import MusicEngine
-from engines.tts_engine import TTSEngine, tts_single_speak
 from core.content_parser import ContentParser
 from core.progress_manager import ProgressManager
+
+# === 新的 Edge-TTS 工人 ===
+def edge_tts_worker(text, voice_id):
+    """
+    使用 edge-tts 下載音訊並播放
+    """
+    async def amain():
+        output_file = f"temp_speech_{os.getpid()}.mp3"
+        communicate = edge_tts.Communicate(text, voice_id)
+        await communicate.save(output_file)
+        
+        # 使用 pygame 播放生成的 MP3
+        pygame.mixer.init()
+        pygame.mixer.music.load(output_file)
+        pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy():
+            await asyncio.sleep(0.1)
+        
+        pygame.mixer.music.unload()
+        if os.path.exists(output_file):
+            os.remove(output_file)
+
+    asyncio.run(amain())
 
 class AIVOController:
     def __init__(self):
         self.music = MusicEngine()
         self.parser = ContentParser()
         self.progress_mgr = ProgressManager()
-        self.tts_engine = TTSEngine()
-        self.selected_voice_id = None
+
+        self.selected_voice_id = "zh-TW-HsiaoChenNeural" # 預設台灣女聲
 
         self.is_running = False
         self.stop_signal = False
@@ -51,39 +77,25 @@ class AIVOController:
         self.master_thread.start()
 
     def _manage_sentences(self, sentences, start_offset):
-        """
-        主管理迴圈：一句一句派發任務給進程
-        """
-        # 取得目前的 voice_id
-        vid = self.selected_voice_id
-
         for i, sentence in enumerate(sentences):
             if self.stop_signal: break
             
-            # 關鍵修正：計算目前真正的句子編號
             real_index = i + start_offset
-            
-            # 更新進度紀錄
             if self.current_file_path:
                 self.progress_mgr.save_progress(self.current_file_path, real_index)
 
             if sentence.strip():
-                print(f">>> 朗讀第 {real_index + 1} 句: {sentence[:15]}...")
-                
-                # 建立並啟動語音進程
-                # 將 voice_id 傳給進程
+                print(f">>> Edge-TTS 朗讀: {sentence[:15]}...")
+                # 啟動 Edge-TTS 專用的進程
                 self.current_worker = multiprocessing.Process(
-                    target=tts_single_speak, 
-                    args=(sentence, vid)
+                    target=edge_tts_worker, 
+                    args=(sentence, self.selected_voice_id)
                 )
                 self.current_worker.start()
-                self.current_worker.join() # 等待唸完
+                self.current_worker.join()
             
-            time.sleep(0.3) # 句間短暫停頓
-
+            time.sleep(0.1)
         self.is_running = False
-        self.music.stop()
-        print("--- 任務完成 ---")
 
     def stop_all(self):
         self.stop_signal = True
@@ -93,7 +105,17 @@ class AIVOController:
         self.is_running = False
     
     def get_voices(self):
-        return self.tts_engine.get_available_voices()
+        """
+        這部分我們可以手動列出常用的 Edge-TTS 人聲
+        或是透過 edge-tts --list-voices 取得
+        """
+        return [
+            {"id": "zh-TW-HsiaoChenNeural", "name": "曉臻 (台灣女聲)"},
+            {"id": "zh-TW-YunJheNeural", "name": "雲哲 (台灣男聲)"},
+            {"id": "zh-CN-XiaoxiaoNeural", "name": "曉曉 (普通話女聲)"},
+            {"id": "zh-CN-YunxiNeural", "name": "雲希 (普通話男聲)"},
+            {"id": "en-US-GuyNeural", "name": "Guy (美式男聲)"}
+        ]
 
     def set_voice(self, voice_id):
         self.selected_voice_id = voice_id
