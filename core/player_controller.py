@@ -3,31 +3,17 @@ import time
 import pyttsx3
 import threading
 from engines.music_engine import MusicEngine
+from engines.tts_engine import TTSEngine, tts_single_speak
 from core.content_parser import ContentParser
 from core.progress_manager import ProgressManager
-
-# === 極簡工人：只負責唸出一句話就關閉 ===
-def tts_single_speak(text):
-    """
-    這個函式每次只執行一次朗讀，確保系統資源完全釋放。
-    """
-    try:
-        engine = pyttsx3.init()
-        engine.setProperty('rate', 150)
-        engine.setProperty('volume', 0.9)
-        engine.say(text)
-        engine.runAndWait()
-        # 確保引擎完全釋放
-        engine.stop()
-        del engine
-    except Exception as e:
-        print(f"朗讀單句錯誤: {e}")
 
 class AIVOController:
     def __init__(self):
         self.music = MusicEngine()
         self.parser = ContentParser()
         self.progress_mgr = ProgressManager()
+        self.tts_engine = TTSEngine()
+        self.selected_voice_id = None
 
         self.is_running = False
         self.stop_signal = False
@@ -68,6 +54,9 @@ class AIVOController:
         """
         主管理迴圈：一句一句派發任務給進程
         """
+        # 取得目前的 voice_id
+        vid = self.selected_voice_id
+
         for i, sentence in enumerate(sentences):
             if self.stop_signal: break
             
@@ -82,9 +71,10 @@ class AIVOController:
                 print(f">>> 朗讀第 {real_index + 1} 句: {sentence[:15]}...")
                 
                 # 建立並啟動語音進程
+                # 將 voice_id 傳給進程
                 self.current_worker = multiprocessing.Process(
                     target=tts_single_speak, 
-                    args=(sentence,)
+                    args=(sentence, vid)
                 )
                 self.current_worker.start()
                 self.current_worker.join() # 等待唸完
@@ -101,3 +91,9 @@ class AIVOController:
             self.current_worker.terminate()
         self.music.stop()
         self.is_running = False
+    
+    def get_voices(self):
+        return self.tts_engine.get_available_voices()
+
+    def set_voice(self, voice_id):
+        self.selected_voice_id = voice_id

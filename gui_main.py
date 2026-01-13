@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import filedialog, messagebox
 from core.player_controller import AIVOController
 import multiprocessing
@@ -14,6 +15,7 @@ class AIVOGUI:
         self.selected_bgm = None
 
         self._setup_ui()
+        self._load_voices()
 
     def _setup_ui(self):
         # 標題
@@ -31,6 +33,17 @@ class AIVOGUI:
         self.lbl_bgm.grid(row=1, column=0, sticky="w")
         tk.Button(file_frame, text="選擇音樂", command=self._select_bgm).grid(row=1, column=1, padx=5)
 
+        # 在「檔案設定」下方增加「聲音設定」
+        voice_frame = tk.LabelFrame(self.root, text="語音人聲設定", padx=10, pady=10)
+        voice_frame.pack(padx=20, pady=10, fill="x")
+
+        tk.Label(voice_frame, text="選擇人聲:").grid(row=0, column=0, sticky="w")
+        
+        self.voice_combo = ttk.Combobox(voice_frame, state="readonly", width=40)
+        self.voice_combo.grid(row=0, column=1, padx=5)
+        # 當選單變動時觸發
+        self.voice_combo.bind("<<ComboboxSelected>>", self._on_voice_selected)
+        
         # 控制區塊
         control_frame = tk.Frame(self.root)
         control_frame.pack(pady=20)
@@ -99,25 +112,20 @@ class AIVOGUI:
                 self.lbl_text.config(text=f"文本: {file.split('/')[-1]}", fg="black")
                 self.resume_index = 0
 
-    def _handle_play(self):
-        if not self.selected_file:
-            messagebox.showwarning("提示", "請先選擇檔案！")
-            return
-        
-        # 詢問是否續讀
-        start_idx = 0
-        if self.resume_index > 0:
-            if messagebox.askyesno("續讀確認", f"偵測到上次讀到第 {self.resume_index+1} 句，是否繼續？"):
-                start_idx = self.resume_index
+    def _load_voices(self):
+        # 從控制器取得系統人聲清單
+        self.all_voices = self.controller.get_voices()
+        voice_names = [v['name'] for v in self.all_voices]
+        self.voice_combo['values'] = voice_names
+        if voice_names:
+            self.voice_combo.current(0) # 預設選第一個
+            self.controller.set_voice(self.all_voices[0]['id'])
 
-        try:
-            content = self.controller.parser.load_file(self.selected_file)
-            # 傳入檔案路徑與起始索引
-            self.controller.start_session(self.selected_file, content, self.selected_bgm, start_idx)
-            self.status_var.set("狀態: 正在播放中...")
-            self.btn_play.config(state="disabled")
-        except Exception as e:
-            messagebox.showerror("錯誤", f"無法啟動: {e}")
+    def _on_voice_selected(self, event):
+        idx = self.voice_combo.current()
+        selected_id = self.all_voices[idx]['id']
+        self.controller.set_voice(selected_id)
+        print(f"已切換人聲至: {self.all_voices[idx]['name']}")
 
 if __name__ == "__main__":
     # Windows 下 multiprocessing 必須在 if __name__ == "__main__" 下運行
